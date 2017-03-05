@@ -8,9 +8,9 @@
 ;;     - Abstract hierarchy tree;
 ;;     - Directory hierarchy tree.
 ;;
-;; A linearized file path (also referred to as "chain") is a flat list of strings
-;; acquired by splitting a filepath with `split-string', e.g. "/dev/shm" ->
-;; '("dev" "shm").
+;; A linearized file path (also referred to as "chain") is a flat list of
+;; strings retrieved by splitting a filepath with `split-string', e.g.
+;; "/dev/shm" -> '("dev" "shm").
 ;;
 ;; An abstract hierarchy tree is either a Lisp atom or a Lisp cons cell whose
 ;; CAR is a Lisp atom and whose CDR is a list of abstract hierarchy trees.
@@ -62,16 +62,16 @@
 ;;     └── xorg.conf.d
 ;;
 ;;
-;; In the current implementation, CAR of the top node holds a tree name, which is
-;; an arbitrary string used for tree identification. The name of the default tree
-;; is "default".
+;; In the current implementation, CAR of the top node holds a tree name, which
+;; is an arbitrary string used for tree identification. The name of the default
+;; tree is "default".
 ;;
 ;; Normally, there is more than one directory tree in an Emacs session because
 ;; the user might want to keep several independent filesets (e.g. one fileset
 ;; per a C++ project) and switch between them when necessary.
 ;;
-;; These trees can be saved to disk and loaded from disk in the same way as Emacs
-;; bookmarks do.
+;; These trees can be saved to disk and loaded from disk in the same way as
+;; Emacs bookmarks do.
 ;;
 
 
@@ -108,17 +108,17 @@ therefore any modification of it affects the parent tree."
 (defun dir-tree-print (tree)
   "Generate a list of paths to all nodes of the directory tree TREE."
   (let ((tree-name (if (listp tree) (car tree) tree)))
-    (if (listp tree)
-        (cons `(,tree-name nil)
-              (apply 'append
-                     (mapcar2 #'(lambda (node)
-                                  (mapcar #'(lambda (child)
-                                              (if (listp child)
-                                                  (cons tree-name child)
-                                                (list tree-name child)))
-                                          (dir-tree-print node)))
-                              (cdr tree))))
-      (list tree-name))))
+	(if (listp tree)
+		(cons `(,tree-name nil)
+			  (apply 'append
+					 (mapcar2 #'(lambda (node)
+								  (mapcar #'(lambda (child)
+											  (if (listp child)
+												  (cons tree-name child)
+												(list tree-name child)))
+										  (dir-tree-print node)))
+							  (cdr tree))))
+	  (list tree-name))))
 
 
 
@@ -229,14 +229,14 @@ instead of prefix completion (that makes it much slower)."
 If PREFIX is non-nil, prepend the return results with PREFIX."
   ;; Optimize the search by precalculating the maximal prefix.
   (let* ((prefix-chain (dir-tree-get-common-prefix tree))
-         (tree (nthcadr (length prefix-chain) tree))
-         (prefix (concat prefix (mapconcat 'concat prefix-chain "/"))))
-    (concat prefix "/"
-            (completing-read (format "File or directory at %s:\n" prefix)
-                             (completion-table-dynamic
-                              #'(lambda (input)
-                                  (dir-tree-get-completion-candidates
-                                   tree input)))))))
+		 (tree (nthcadr (length prefix-chain) tree))
+		 (prefix (concat prefix (mapconcat 'concat prefix-chain "/"))))
+	(concat prefix "/"
+			(completing-read (format "File or directory at %s:\n" prefix)
+							 (completion-table-dynamic
+							  #'(lambda (input)
+								  (dir-tree-get-completion-candidates
+								   tree input)))))))
 
 
 
@@ -273,7 +273,7 @@ Descend the tree, calculating the common prefix for all files in the tree.
 Return this prefix in a form of a linearized path."
   (let (pathvec)
   (while (and (listp tree) (eq (length (cdr tree)) 1))
-    (setq pathvec (cons (car tree) pathvec))
+	(setq pathvec (cons (car tree) pathvec))
 	(setq tree (cadr tree)))
 
   (setq pathvec (cons (if (listp tree) (car tree) tree) pathvec))
@@ -396,8 +396,10 @@ This two-step prompt can be used to explicitly narrow down the candidates set."
 	(find-file (if current-prefix-arg
 				   (let* ((dir (expand-file-name (dir-tree-get dir-cache-default
 															   "/")))
-						  (subtree (subtree dir-cache-default (linearize-path dir))))
-					 (dir-tree-get-apropos subtree (file-name-as-directory dir)))
+						  (subtree (subtree dir-cache-default
+											(linearize-path dir))))
+					 (dir-tree-get-apropos subtree
+										   (file-name-as-directory dir)))
 				   (dir-tree-get-apropos dir-cache-default "/")))))
 
 
