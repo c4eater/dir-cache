@@ -105,6 +105,23 @@ therefore any modification of it affects the parent tree."
 
 
 
+(defun dir-tree-print (tree)
+  "Generate a list of paths to all nodes of the directory tree TREE."
+  (let ((tree-name (if (listp tree) (car tree) tree)))
+    (if (listp tree)
+        (cons `(,tree-name nil)
+              (apply 'append
+                     (mapcar2 #'(lambda (node)
+                                  (mapcar #'(lambda (child)
+                                              (if (listp child)
+                                                  (cons tree-name child)
+                                                (list tree-name child)))
+                                          (dir-tree-print node)))
+                              (cdr tree))))
+      (list tree-name))))
+
+
+
 (defun dir-tree-gen (dirname &optional pattern)
   "Internal function.
 Return DIRNAME's structure in a form of a tail of a hierarchy tree, concerning
@@ -146,10 +163,10 @@ hierarchy tree with `setcdr'."
 
 (defun dir-tree-get-completion-candidates (tree input)
   "Internal function.
-Get completion candidates for INPUT from TREE.
-TREE is a directory hierarchy tree.
-INPUT is an <incomplete> path to some TREE node, like e.g.
-'dir1/dir2/filena', starting from the root of TREE."
+Get completion candidates for INPUT from TREE, which is a directory tree.
+
+The candidate list will include those paths to TREE nodes for which INPUT is
+ a substring."
   (let* ((prefix (if (> (length input) 0)
 					 (let ((i (1- (length input))))
 					   (while (and (/= (elt input i) ?\/) (> i 0))
@@ -176,7 +193,7 @@ instead of prefix completion (that makes it much slower)."
 
   (defun match-fn (tree input-chain)
 	;; Local function. Returns subdirectories of TREE that match INPUT-CHAIN,
-	;; producing the result in a chain form.
+	;; producing the result in a form of a list of paths.
 	(apply 'append
 		   (mapcar2 #'(lambda (node)
 						(let* ((node-name (if (listp node) (car node) node))
@@ -192,15 +209,11 @@ instead of prefix completion (that makes it much slower)."
 													 completion-ignore-case))))
 						  (if (listp node)
 							  (if (and match (null (cdr input-chain)))
-								  (list (list (concat node-name "/")))
-								(mapcar2 #'(lambda (recursive-result)
-											 (if recursive-result
-												 (if (eq recursive-result t)
-													 (list node-name)
-												   (cons node-name
-														 recursive-result))))
+								  (dir-tree-print node)
+								(mapcar2 #'(lambda (chain)
+											 (if chain (cons node-name chain)))
 										 (match-fn node
-                                                   (if match (cdr input-chain)
+												   (if match (cdr input-chain)
 													 initial-chain))))
 							(if match `((,node-name))))))
 					(cdr tree))))
@@ -233,27 +246,24 @@ Act like `dir-tree-get' but use apropos completion instead of prefix
 completion."
   ;; Optimize the search by precalculating the maximal prefix.
   (let* ((prefix-chain (dir-tree-get-common-prefix tree))
-         (tree (nthcadr (length prefix-chain) tree))
-         (completion-styles '(emacs21))
-         (icicle-completion-style-set '(emacs21))
-         (prefix (concat prefix (mapconcat 'concat prefix-chain "/"))))
+		 (tree (nthcadr (length prefix-chain) tree))
+		 (prefix (concat prefix (mapconcat 'concat prefix-chain "/"))))
 
-  (defun completion-fn (input pred action)
-	(let ((candidates (dir-tree-get-completion-candidates-apropos
-                       tree input)))
-	  (cond ((null action) (try-completion input candidates))
-			((eq t action)
-			 candidates)
-            ((eq action 'metadata)
-             (cons 'metadata nil))
-			((eq 'lambda action) (member input candidates))
-            ((eq (car action) 'boundaries)
-             (cons (list 'boundaries 0) (length input)))
-			(t nil))))
+	(defun completion-fn (input pred action)
+	  (let ((candidates (dir-tree-get-completion-candidates-apropos
+						 tree input)))
+		(cond ((null action) (ac-match-substring input candidates))
+			  ((eq t action) candidates)
+			  ((eq action 'metadata) (cons 'metadata nil))
+			  ((eq 'lambda action) (member input candidates))
+			  ((eq (car action) 'boundaries)
+			   (cons (list 'boundaries 0) (length input)))
+			  (t nil))))
 
-  (concat prefix "/"
-          (completing-read (format "File or directory at %s:\n" prefix)
-                           'completion-fn))))
+	(concat prefix "/"
+			(let ((completion-styles '(substring)))
+			  (completing-read (format "File or directory at %s:\n" prefix)
+							   'completion-fn)))))
 
 
 
